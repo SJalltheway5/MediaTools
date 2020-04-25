@@ -113,3 +113,5 @@ Example:
   lufsnorm -I -16 -LRA 11 -TP -1.5 -ow audio-1.wav audio-2.wav audio-n.wav
 ```
 The output file of `lufsnorm` will inherit the input filename with the loudness value appended before the file extension, e.g. `example-audio.wav` will output `example-audio-16LUFS.wav` by default, or `example-audio-22LUFS.wav` if given the option `-I -22`.  There will also be an accompanying log file, `example-audio-16LUFS.wav.txt` or `example-audio-22LUFS.wav.txt`, respectively.
+#### TODO:
+  - [ ] get sample rate from input file, don't always output 192k (*.wav)
