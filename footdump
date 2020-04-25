@@ -1,0 +1,159 @@
+#!/bin/bash
+
+# Supported file types
+FILE_TYPES="JPG JPEG CR2 RAW LOG MP4 MOV WAV MP3"
+FILE_TYPES="${FILE_TYPES} ${FILE_TYPES,,}"
+
+cat << DONE
+  ____         _____
+ | __ \       /    /|
+ ||  || ---> /____/ /
+ ||__||      |____|/
+
+===|Footage Dumper|===
+
+DONE
+
+function usage { cat << DONE; }
+Usage:
+  ${0} --job <JOBCODE> --from <FROM> --to <TO>
+
+  -j|--job        <Unique job code for project>
+  -f|--from       <Directory or device to copy media FROM>
+  -t|--to         <Directory to copy media TO>
+  -T|--toplevel   Copies all files to the top level of the "from" directory
+                  rather than maintaining the existing directory structure
+
+Example:
+  ${0} -j MYPROJ -f /media/user/camera/ -t /media/user/dumped_footage/
+
+"${0}" with no arguments runs in interactive mode
+
+DONE
+
+while test ${#} -gt 0; do
+  case "${1}" in
+    h|-h|help|-help|--help)
+      usage
+	  exit 0;;
+    -j|--job)
+      JOB="${2}"
+      shift; shift;;
+    -f|--from)
+      FROM="${2}"
+	    shift; shift;;
+    -t|--to)
+      TO="${2}"
+	    shift; shift;;
+    -T|--toplevel)
+      TOPLEVEL=1
+      shift;;
+    *)
+      echo 'ERROR: Unrecognized input "'${1}'"'
+      shift;;
+  esac
+done
+
+# Enter unique job code
+while test -z "${JOB}"; do
+  echo -n 'Job Code: '
+  read JOB
+done
+
+# Get FROM
+# Print device partition list
+if test -z "${FROM}"; then
+  echo
+  lsblk -e 7 -l -o NAME,LABEL,MOUNTPOINT,SIZE,TYPE |\
+    grep -v disk |\
+	  grep -i -v /boot
+  echo
+fi
+
+function from_check {
+  test -b "/dev/${FROM}" && FROM="/dev/${FROM}"
+  if test -b "${FROM}"; then
+    mount | grep "${FROM}" >/dev/null 2>&1
+    if test ${?} -gt 0; then
+      udisksctl mount -b "${FROM}" >/dev/null
+      UNMOUNT=1
+    fi
+    FROM="$(mount | grep "${FROM}" | cut -d\  -f3)"
+  elif test -d "${FROM}"; then
+    FROM="$(cd "${FROM}" && pwd)"
+  elif test -z "${FROM}"; then
+    echo
+  else
+    echo 'ERROR: "'${FROM}'" is not a valid partition or directory'
+    unset FROM
+  fi
+}
+
+test -n "${FROM}" && from_check
+while test -z "${FROM}"; do
+  echo -n 'From: '
+  read -e FROM
+  test -z "${FROM}" && echo || from_check
+done
+
+# Get TO
+function to_check {
+  test -d "${TO}" || mkdir -p "${TO}"
+  TO="$(cd "${TO}" && pwd)"
+}
+
+test -n "${TO}" && to_check
+while test -z "${TO}"; do
+  echo -n 'To: '
+  read -e TO
+  test -z "${TO}" && echo
+done
+to_check
+
+# Find files on/in FROM
+> "${TO}/files.txt1"
+for TYPE in ${FILE_TYPES}; do
+  find "${FROM}" -name "*.${TYPE}" 2>/dev/null >> "${TO}/files.txt1"
+done
+
+while IFS= read -r FILE; do
+  echo "${FILE//"${FROM}"/}" | cut -c 2- >> "${TO}/files.txt"
+done < "${TO}/files.txt1"
+rm "${TO}/files.txt1"
+
+TOTAL=$(cat "${TO}/files.txt" | wc -l)
+COUNT=1
+START="$(date)"
+
+while IFS= read -r FILE; do
+  if test "${TOPLEVEL}" != "1"; then
+    DIR="$(dirname "${FILE}")"
+    test -d "${DIR}" || mkdir -p "${TO}/${DIR}"
+  fi
+  DATE="$(stat "${FROM}/${FILE}" | grep 'Modify' | cut -c 9-27 | sed s/':'/'-'/g | sed s/' '/'_'/g)"
+  NUM="$(echo "${FILE}" | rev | cut -d. -f2- | cut -c -4 | rev)"
+  NUM="$(echo "${NUM}" | rev | cut -d/ -f1 | rev)"
+  EXT="$(echo "${FILE}" | rev | cut -d. -f1 | rev)"
+  NAME="${JOB}_${DATE}_${NUM}.${EXT}"
+  test -z "${DIR}" || DIR="${DIR}/"
+  echo "(${COUNT}/${TOTAL}) \"${FILE}\" --> \"${DIR}${NAME}\"" | tee -a "${TO}/transfer.txt"
+  if test -z "$(which pv)"; then
+    cp -v "${FROM}/${FILE}" "${TO}/${DIR}${NAME}"
+  else
+    pv "${FROM}/${FILE}" > "${TO}/${DIR}${NAME}"
+  fi
+  (( COUNT++ ))
+  echo
+done < "${TO}/files.txt"
+
+END="$(date)"
+LOG="${TO}/TRANSFER_$(date '+%Y-%m-%d_%H-%M-%S').LOG"
+cat > "${LOG}" << DONE
+    From: ${FROM}
+      To: ${TO}
+ Started: ${START}
+Finished: ${END}
+
+DONE
+cat "${TO}/transfer.txt" | column -t >> "${LOG}"
+rm "${TO}"/{files,transfer}.txt
