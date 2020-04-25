@@ -53,6 +53,7 @@ To ensure accurate date/time information, make sure it is set properly on all re
 
 ## mkproxy
 #### a tool for batch generating video proxies/dailies with timecode
+`mkproxy` uses `ffmpeg` to transcode video to either H.264 (default) or ProResProxy and the `drawtext` video filter to generate either drop-frame (default) or non-drop-frame timecode. Any audio streams present in the original video files will be copied to the new proxy files without transcoding.
 ```
 Usage:
   mkproxy  <options>  /path/to/originals  /path/to/proxies
@@ -91,12 +92,12 @@ $ mkproxy
     Concatenating audio and video ...
     Removing temp files ...  
 ```
-`mkproxy` uses `ffmpeg` to transcode video to either H.264 (default) or ProResProxy and the `drawtext` video filter to generate either drop-frame (default) or non-drop-frame timecode. Any audio streams present in the original video files will be copied to the new proxy files without transcoding.
 #### TODO:
   - [ ] make framerate default to original media's, not `29.97`
   - [ ] add LUT support
 ## lufsnorm
-a tool for normalizing audio based on LUFS
+#### a tool for normalizing audio based on LUFS
+`lufsnorm` is a simple frontend for `ffmpeg`'s `loudnorm` audio filter. More information can be found [here](https://k.ylo.ph/2016/04/04/loudnorm.html). It may be superfluous alongside digital audio workstations that support loudness normalization, such as Ardour 5.
 ```
 Usage:
   lufsnorm  <options>  <files to process>
@@ -111,5 +112,4 @@ Options:
 Example:
   lufsnorm -I -16 -LRA 11 -TP -1.5 -ow audio-1.wav audio-2.wav audio-n.wav
 ```
-`lufsnorm` is a simple frontend for `ffmpeg`'s `loudnorm` audio filter. More information can be found [here](https://k.ylo.ph/2016/04/04/loudnorm.html). It may be superfluous alongside digital audio workstations that support loudness normalization, such as Ardour 5.<br><br>
 The output file of `lufsnorm` will inherit the input filename with the loudness value appended before the file extension, e.g. `example-audio.wav` will output `example-audio-16LUFS.wav` by default, or `example-audio-22LUFS.wav` if given the option `-I -22`.  There will also be an accompanying log file, `example-audio-16LUFS.wav.txt` or `example-audio-22LUFS.wav.txt`, respectively.
