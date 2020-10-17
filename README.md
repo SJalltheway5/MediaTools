@@ -1,8 +1,11 @@
 # MediaTools
 #### an assortment of BASH scripts to automate media-related tasks
+#### TODO:
+  - [ ] maybe add some YAD interfaces?
+  - [ ] general cleanup
 ## footdump
 #### a tool for dumping footage
-`footdump` is essentially a CLI-driven replacement for Rapid Photo Downloader. The primary reason to use `footdump` instead is that it supports transferring audio files.
+`footdump` is a CLI-driven tool for transferring media files from recording devices.
 ```
 Usage:
   footdump --job <JOBCODE> --from <FROM> --to <TO>
@@ -23,7 +26,7 @@ Example of interactive use:
 $ footdump
    ____         _____
   | __ \       /    /|
-  ||  || ---> /____/ /
+  ||  || ===> /____/ /
   ||__||      |____|/
 
   ===|Footage Dumper|===
@@ -95,6 +98,8 @@ $ mkproxy
 #### TODO:
   - [ ] make framerate default to original media's, not `29.97`
   - [ ] add LUT support
+  - [ ] expand timecode functionality
+  - [ ] add flag to bypass timecode
 ## lufsnorm
 #### a tool for normalizing audio based on LUFS
 `lufsnorm` is a simple frontend for `ffmpeg`'s `loudnorm` audio filter. More information can be found [here](https://k.ylo.ph/2016/04/04/loudnorm.html). It may be superfluous alongside digital audio workstations that support loudness normalization, such as Ardour 5.
@@ -110,8 +115,10 @@ Options:
   -n|--dryrun              Scans, but doesn't process, input files
 
 Example:
-  lufsnorm -I -16 -LRA 11 -TP -1.5 -ow audio-1.wav audio-2.wav audio-n.wav
+  lufsnorm -I -16 -LRA 11 -TP -1.5 audio-1.wav audio-2.wav audio-n.wav
 ```
 The output file of `lufsnorm` will inherit the input filename with the loudness value appended before the file extension, e.g. `example-audio.wav` will output `example-audio-16LUFS.wav` by default, or `example-audio-22LUFS.wav` if given the option `-I -22`.  There will also be an accompanying log file, `example-audio-16LUFS.wav.txt` or `example-audio-22LUFS.wav.txt`, respectively.
 #### TODO:
   - [ ] get sample rate from input file, don't always output 192k (*.wav)
+  - [ ] support appropriate non-WAV filetypes
+  - [ ] support video files
